@@ -108,14 +108,51 @@ $(function() {
   )
 
   const large_donation_boundary = 100000;
-  $(document).on("submit", "form#new_donation", (e, _) =>
+  
+  // Handle both new and edit donation forms
+  $(document).on("submit", "form#new_donation, form[id^='edit_donation_']", function(e) {
+    // Check if this is a resubmission after validation errors
+    // If the form has already been validated for large donations, don't check again
+    
+    
+    let shouldSubmit = true;
+    
     $(".quantity").each(function(_, q) {
       const quantity = parseInt(q.value, 10);
-      if (quantity > large_donation_boundary) {
-        confirm(
-          `${quantity} items is a large donation! Are you sure you want to submit?`
-        );
+      
+      // Skip if quantity is below threshold
+      if (quantity <= large_donation_boundary) {
+        return true; // Continue to next iteration
       }
-    })
-  );
+
+      // Show confirmation dialog for large donations
+      const confirmMessage = `${quantity} items is a large donation! Are you sure you want to submit?`;
+      if (!confirm(confirmMessage)) {
+        shouldSubmit = false;
+        e.preventDefault();
+        
+        // Re-enable submit buttons and restore original text
+        const resetSubmitButtons = () => {
+          const submitButtons = $('button[type="submit"], input[type="submit"]');
+          submitButtons.prop('disabled', false);
+          submitButtons.each(function() {
+            const originalText = $(this).data('original-text') || $(this).text();
+            $(this).text(originalText);
+          });
+        };
+
+        setTimeout(resetSubmitButtons, 50);
+        
+        return false; // Break out of loop
+      }
+    });
+    
+    
+    return shouldSubmit;
+  });
+  
+  // Store original button text before form submission
+  $(document).on("click", 'button[type="submit"], input[type="submit"]', function() {
+    $(this).data('original-text', $(this).text());
+  });
 });
